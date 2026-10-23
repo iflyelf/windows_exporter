@@ -40,7 +40,7 @@ windows_exporter/
 
 1. **拉取代码**
    ```sh
-   git clone https://github.com/your-org/windows_exporter.git
+   git clone https://github.com/iflyelf/windows_exporter.git
    cd windows_exporter
    ```
 2. **开发自定义插件**

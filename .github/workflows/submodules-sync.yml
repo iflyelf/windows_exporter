@@ -10,7 +10,7 @@ on:
         default: 'build Sync'
   # 定时触发（每6小时）
   schedule:
-     - cron: '* */6 * * *'
+     - cron: '0 */6 * * *'
   # 点Star触发
   watch:
      types: [started]
@@ -35,7 +35,7 @@ jobs:
     - name: 检出代码（包含子模块）
       uses: actions/checkout@v4
       with:
-        token: ${{ secrets.CI_TOKEN }}
+        token: ${{ secrets.GITHUB_TOKEN }}
         submodules: true
 
     # 第二步：获取最新版本信息

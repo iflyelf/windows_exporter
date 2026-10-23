@@ -101,7 +101,7 @@ jobs:
           echo "REVISION=$REVISION" >> $GITHUB_ENV
           echo "BRANCH=$BRANCH" >> $GITHUB_ENV
           # echo "BUILDUSER=$(whoami)@$(hostname)" >> $GITHUB_ENV
-          echo "BUILDUSER=xiaonuo (Author: xiaonuo)" >> $GITHUB_ENV
+          echo "BUILDUSER=iflyelf (Author: iflyelf)" >> $GITHUB_ENV
           echo "BUILDDATE=$(TZ='Asia/Shanghai' date +'%Y-%m-%dT%H:%M:%S+08:00')" >> $GITHUB_ENV
 
       - name: 调试版本信息
