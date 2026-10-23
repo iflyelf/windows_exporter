@@ -5,8 +5,53 @@ windows_exporter 是一个面向 Windows 系统的高性能 Prometheus 监控采
 ## 主要特性
 - **插件化机制**：支持通过 my_collectors 目录和自动注册脚本，灵活扩展自定义采集器。
 - **多平台支持**：支持 Windows/amd64 和 Windows/arm64 架构。
+- **旧系统兼容**：额外发布 legacy 版本，支持 Windows 7 / Server 2008 R2 ~ 2012 R2。
 - **自动化构建与发布**：集成 GitHub Actions 自动编译、发布、清理。
 - **丰富的内置采集器**：覆盖常见 Windows 性能、服务、硬件、网络等监控需求。
+
+## Windows 版本兼容性
+
+`windows_exporter` 从 v0.30 起使用 Windows MI / Go 1.21+，不再支持 Windows 7 和
+Server 2008 R2。本仓库因此同时发布两套资产（同一个 `latest` Release）：
+
+| 资产 | 源码基线 | 适用系统 |
+|------|----------|----------|
+| `windows_exporter-amd64.exe` / `windows_exporter-arm64.exe` | 上游最新版（v0.32+） | Windows 10 / Server 2016 及以上 |
+| `windows_exporter-amd64-legacy.exe` / `windows_exporter-arm64-legacy.exe` | 官方 v0.23.1 + Go 1.20.14 | Windows 7 SP1 / Server 2008 R2 SP1 / 8 / 8.1 / Server 2012 / 2012 R2 |
+
+下载地址（`latest` 标签）：
+
+```text
+https://github.com/iflyelf/windows_exporter/releases/download/latest/windows_exporter-amd64.exe
+https://github.com/iflyelf/windows_exporter/releases/download/latest/windows_exporter-amd64-legacy.exe
+```
+
+legacy 版本由 `.github/workflows/legacy.yml` 自动构建，并移植了本仓库的
+`hardware_info` 采集器（WMI 实现），指标名与新版一致：
+
+```powershell
+# 默认采集器 + 硬件信息
+windows_exporter-amd64-legacy.exe --collectors.enabled "[defaults],hardware_info"
+```
+
+或在 `config.yaml` 中：
+
+```yaml
+collectors:
+  enabled: "[defaults],hardware_info"
+```
+
+> legacy 基于 v0.23.1，不包含 v0.30+ 新增的采集器/指标改名；在旧系统上建议只启用
+> `cpu,cs,logical_disk,memory,net,os,service,system,textfile,hardware_info`。
+
+### 构建 legacy 版本
+
+```bash
+git clone --depth 1 --branch v0.23.1 https://github.com/prometheus-community/windows_exporter.git legacy_src
+cp my_collectors/legacy/hardware_info_collector.go legacy_src/collector/hardware_info.go
+cd legacy_src
+GOTOOLCHAIN=go1.20.14 CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -o windows_exporter-amd64-legacy.exe .
+```
 
 ## 插件（自定义采集器）机制
 
