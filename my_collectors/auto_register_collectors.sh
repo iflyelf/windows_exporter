@@ -44,31 +44,8 @@ if ! grep -q "func RegisterCollector" "$COLLECTOR_GO"; then
     mv "${COLLECTOR_GO}.tmp" "$COLLECTOR_GO"
 fi
 
-# 0.5. 在 Collection 初始化函数体内插入 CustomCollectors 合并到 collectors 的代码（防止重复插入），并插入日志
-for funcname in NewWithFlags NewWithConfig New; do
-    if ! grep -q "for name, factory := range CustomCollectors {" "$COLLECTION_GO"; then
-        awk -v fname="$funcname" '
-        BEGIN {in_func=0; brace_count=0}
-        {
-            print
-            if ($0 ~ "^func " fname "\\(") {in_func=1}
-            if (in_func && $0 ~ /collectors *:=/ && brace_count==0) {
-                print "    fmt.Println(\"CustomCollectors at merge:\", CustomCollectors)"  # 日志
-                print "    // 自动合并自定义采集器"
-                print "    for name, factory := range CustomCollectors {"
-                print "        collectors[name] = factory()"
-                print "    }"
-            }
-            if (in_func) {
-                brace_count += gsub(/{/, "{")
-                brace_count -= gsub(/}/, "}")
-                if (brace_count == 0) in_func=0
-            }
-        }
-        ' "$COLLECTION_GO" > "${COLLECTION_GO}.tmp"
-        mv "${COLLECTION_GO}.tmp" "$COLLECTION_GO"
-    fi
-done
+# 0.5. NewWithFlags / NewWithConfig 的合并逻辑在文件末尾（步骤 10）统一插入，
+#      该步骤先清理旧插入内容再重新插入，保证脚本可重复执行。
 
 # 0.6. 在 main.go 的 import 块内部插入 _ "github.com/prometheus-community/windows_exporter/my_collectors"，防止重复插入
 if ! grep -q 'github.com/prometheus-community/windows_exporter/my_collectors' "$MAIN_GO"; then
@@ -173,20 +150,23 @@ rm -f "$TMP_IMPORT_GO"
 
 # 8. 强制删除 collect.go 中所有 my_collectors 相关 import，彻底避免循环依赖
 sed -i '/my_collectors/d' windows_exporter/pkg/collector/collect.go
-# 9. 自动清理 my_collectors 目录下所有 .go 文件中的不可见字符（如 ESC/U+001B），合并为一行
-sed -i 's/[^[:print:]\t]//g' windows_exporter/my_collectors/*.go
+# 9. 自动清理 my_collectors 目录下所有 .go 文件中的不可见控制字符（如 ESC/U+001B）。
+#    注意：只删除 ASCII 控制字符，不能使用 [[:print:]]，否则在 C/POSIX locale（GitHub Actions 默认）
+#    下会把中文等 UTF-8 多字节字符一并删掉。
+sed -i 's/[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]//g' windows_exporter/my_collectors/*.go
 
-# 10. 优化：插入 CustomCollectors 合并逻辑前，先清理旧的合并片段，防止重复
-sed -i '/CustomCollectors at merge/,+4d' windows_exporter/pkg/collector/collection.go
+# 10. 插入 CustomCollectors 合并逻辑（幂等：先清理旧插入片段，再重新插入）
+#     新格式片段为 4 行（注释 + for + 赋值 + }）；旧格式片段为 5 行（含日志行）
+sed -i '/my_collectors:auto-merge/,+3d' "$COLLECTION_GO"
+sed -i '/自动合并自定义采集器/,+4d' "$COLLECTION_GO"
 for funcname in NewWithFlags NewWithConfig; do
     awk -v fname="$funcname" '
     BEGIN {in_func=0; brace_count=0; inserted=0}
     {
         if ($0 ~ "^func " fname "\\(") {in_func=1}
-        if (in_func && $0 ~ /collectors *:=/ && brace_count==0 && !inserted) {
+        if (in_func && $0 ~ /collectors *:=/ && !inserted) {
             print
-            print "    // 自动合并自定义采集器"
-            print "    fmt.Println(\"CustomCollectors at merge:\", CustomCollectors)"  # 日志
+            print "    // my_collectors:auto-merge (generated, do not edit)"
             print "    for name, factory := range CustomCollectors {"
             print "        collectors[name] = factory()"
             print "    }"
@@ -195,8 +175,7 @@ for funcname in NewWithFlags NewWithConfig; do
         }
         if (in_func && $0 ~ /^\s*return / && inserted==0) {
             # 如果没找到 collectors 初始化，也在 return 前插入
-            print "    // 自动合并自定义采集器 (return 前)"
-            print "    fmt.Println(\"CustomCollectors at merge:\", CustomCollectors)"
+            print "    // my_collectors:auto-merge (generated, do not edit)"
             print "    for name, factory := range CustomCollectors {"
             print "        collectors[name] = factory()"
             print "    }"

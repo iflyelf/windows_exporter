@@ -42,8 +42,12 @@ jobs:
     - name: 获取最新版本
       run: |
         cd windows_exporter
-        git fetch --tags
-        LATEST_VERSION=$(git tag --sort=-version:refname | grep '^v[0-9]' | head -1)
+        git fetch --tags --force
+        # 优先取最新的正式版（不含 -beta/-rc 等预发布后缀），没有正式版时再退回最新 tag
+        LATEST_VERSION=$(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
+        if [ -z "$LATEST_VERSION" ]; then
+          LATEST_VERSION=$(git tag --sort=-version:refname | grep -E '^v[0-9]' | head -1)
+        fi
         echo "Latest version: $LATEST_VERSION"
         echo "LATEST_VERSION=$LATEST_VERSION" >> $GITHUB_ENV
 

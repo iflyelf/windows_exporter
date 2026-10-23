@@ -348,7 +348,8 @@ func (c *HardwareInfoCollector) Build(logger *slog.Logger, miSession *mi.Session
 }
 
 // Collect 采集指标并输出到 Prometheus
-func (c *HardwareInfoCollector) Collect(ch chan<- prometheus.Metric) error {
+// 注意：windows_exporter v0.32.x 起 Collector 接口的 Collect 方法新增 maxScrapeDuration 参数
+func (c *HardwareInfoCollector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
 	info := getHardwareInfo()
 	// 主板信息
 	ch <- prometheus.MustNewConstMetric(
