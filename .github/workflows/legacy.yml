@@ -39,6 +39,13 @@ jobs:
           cp my_collectors/legacy/hardware_info_collector.go \
              legacy_src/collector/hardware_info.go
 
+      - name: 默认启用 hardware_info（legacy 专用）
+        run: |
+          # 仅改 legacy 构建：默认采集器加入 memory + hardware_info，
+          # 直接运行 legacy exe 也能采集硬件信息；不影响 latest 资产。
+          sed -i 's/defaultCollectors            = "cpu,cs,logical_disk,net,os,service,system,textfile"/defaultCollectors            = "cpu,cs,logical_disk,memory,net,os,service,system,textfile,hardware_info"/' legacy_src/exporter.go
+          grep -q 'hardware_info' legacy_src/exporter.go
+
       - name: 设置 Go 1.20
         uses: actions/setup-go@v5
         with:

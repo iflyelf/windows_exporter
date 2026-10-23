@@ -27,19 +27,24 @@ https://github.com/iflyelf/windows_exporter/releases/download/latest/windows_exp
 ```
 
 legacy 版本由 `.github/workflows/legacy.yml` 自动构建，并移植了本仓库的
-`hardware_info` 采集器（WMI 实现），指标名与新版一致：
+`hardware_info` 采集器（WMI 实现），指标名与新版一致。legacy 二进制的默认采集器
+已包含 `memory,hardware_info`，直接运行即启用：
 
 ```powershell
-# 默认采集器 + 硬件信息
-windows_exporter-amd64-legacy.exe --collectors.enabled "[defaults],hardware_info"
+windows_exporter-amd64-legacy.exe
+# 等价于 --collectors.enabled "[defaults],hardware_info"
 ```
 
-或在 `config.yaml` 中：
+也可用 `config.yaml` 显式覆盖：
 
 ```yaml
 collectors:
   enabled: "[defaults],hardware_info"
 ```
+
+> 升级平台/`install.ps1` 安装时生成的 legacy 配置同样默认启用 `hardware_info`。
+> 注意：**官方 v0.23.1 发布资产不含本仓库的 hardware_info**；若替换为官方二进制，
+> 请从 `collectors.enabled` 删除 `hardware_info`，否则启动会报未知采集器。
 
 > legacy 基于 v0.23.1，不包含 v0.30+ 新增的采集器/指标改名；在旧系统上建议只启用
 > `cpu,cs,logical_disk,memory,net,os,service,system,textfile,hardware_info`。
